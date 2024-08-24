@@ -1,0 +1,78 @@
+name: Windows
+on: [ push, pull_request ]
+
+env:
+  REPO: template-cpp
+  GITHUB_REPO: Kubaaa96/template-cpp
+
+jobs:
+  windows:
+    name: Windows
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        CONFIG:
+          - {
+            BUILD_TYPE: Release
+          }
+          - {
+            BUILD_TYPE: Debug
+          }
+
+    steps:
+      - name: Install dependencies
+        run: | 
+          pip install conan gcovr
+          choco install cppcheck ccache
+
+      - name: Check choco location
+        run: |
+          choco list --exact clang-format --trace
+          choco list --exact clang-tidy --trace
+          choco list --exact ccache --trace
+          choco list --exact cppcheck --trace
+
+      - name: Set cppcheck to PATH
+        run : |
+          echo "C:\ProgramData\chocolatey\bin" >> $env:GITHUB_PATH
+          echo "C:\Program Files\Cppcheck" >> $env:GITHUB_PATH
+      #          Get-ChildItem -Path "${env:ProgramFiles}" | Where-Object {($_.Name -Like 'cppcheck*')} | % { $_.FullName }
+      - name: Validate cppcheck
+        run: |
+          cmd /c "echo %PATH%"
+          cppcheck --version
+
+      - name: Clone the git repo
+        uses: actions/checkout@v2
+        with:
+          path: project
+          fetch-depth: 50
+
+      - name: Create project build directory
+        working-directory: project
+        run: |
+          mkdir build
+
+      - name: Configure project
+        working-directory: project
+        run:
+          cmake . -Bbuild
+          -G "Visual Studio 17 2022"
+          -A x64
+          -DCMAKE_BUILD_TYPE="${{ matrix.CONFIG.BUILD_TYPE }}"
+
+      - name: Build project
+        working-directory: project
+        run: cmake --build ./build --config ${{ matrix.CONFIG.BUILD_TYPE }}
+
+      - name: Run tests
+        working-directory: project/build
+        run:
+          if ("${{ matrix.CONFIG.BUILD_TYPE }}" -eq "Debug")
+          {
+          cd test;
+          ctest -C ${{ matrix.CONFIG.BUILD_TYPE }} --output-on-failure --timeout 540 }
+          else
+          {
+          Write-host "No test on Release Build type"
+          }

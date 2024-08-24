@@ -1,0 +1,74 @@
+name: MacOS
+on: [ push, pull_request ]
+
+env:
+  REPO: template-cpp
+  GITHUB_REPO: Kubaaa96/template-cpp
+
+jobs:
+  linux:
+    name: MacOS 12
+    runs-on: macos-12
+    strategy:
+      matrix:
+        CONFIG:
+          - {
+            BUILD_TYPE: Debug,
+            CC: gcc-12,
+            CXX: g++-12
+          }
+          - {
+            BUILD_TYPE: Release,
+            CC: gcc-12,
+            CXX: g++-12
+          }
+          - {
+            BUILD_TYPE: Debug,
+            CC: $(brew --prefix llvm@15)/bin/clang,
+            CXX: $(brew --prefix llvm@15)/bin/clang++
+          }
+          - {
+            BUILD_TYPE: Release,
+            CC: $(brew --prefix llvm@15)/bin/clang,
+            CXX: $(brew --prefix llvm@15)/bin/clang++
+          }
+    steps:
+      - name: Install Dependencies
+        run: | 
+          pip3 install conan gcovr
+          brew install cppcheck ccache clang-format
+          export PATH=$(brew --prefix llvm@15)/bin:$PATH
+
+      - name: Setup symlink for clang-tidy
+        run: sudo ln -s $(brew --prefix llvm@15)/bin/clang-tidy /usr/local/bin
+
+      - name: Clone the git repo
+        uses: actions/checkout@v2
+        with:
+          path: project
+          fetch-depth: 50
+
+      - name: Create project build directory
+        working-directory: project
+        run: |
+          mkdir build
+
+      - name: Configure project
+        working-directory: project
+        run: cmake -Bbuild
+          -DCMAKE_BUILD_TYPE="${{ matrix.CONFIG.BUILD_TYPE }}"
+          -DCMAKE_C_COMPILER="${{ matrix.CONFIG.CC }}"
+          -DCMAKE_CXX_COMPILER="${{ matrix.CONFIG.CXX }}" .
+
+      - name: Build project
+        working-directory: project
+        run: cmake --build ./build --config ${{ matrix.CONFIG.BUILD_TYPE }}  --
+
+      - name: Run tests
+        working-directory: project/build
+        run:
+          if [ "${{ matrix.CONFIG.BUILD_TYPE }}" == "Debug" ]; then
+          cd test && ctest -C ${{ matrix.CONFIG.BUILD_TYPE }} --output-on-failure --timeout 540;
+          else
+          echo "No test on Release Build type";
+          fi
