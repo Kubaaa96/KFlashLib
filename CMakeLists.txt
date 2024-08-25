@@ -20,7 +20,7 @@ run_conan(
         INSTALL_ARGS --build=missing
 )
 
-project(cpp-template VERSION 0.0.3 DESCRIPTION "Basic template project for C++ language" LANGUAGES CXX C)
+project(kflash-lib VERSION 0.0.1 DESCRIPTION "Flashcard library for KFlash app" LANGUAGES CXX C)
 
 set(CMAKE_CXX_STANDARD 20)
 
@@ -28,17 +28,17 @@ set(ENABLE_CLANG_TIDY "ENABLE_CLANG_TIDY")
 set(ENABLE_CPPCHECK "ENABLE_CPPCHECK")
 
 project_options(
-        PREFIX "cpptemplate"
+        PREFIX "kflashlib"
         ENABLE_CACHE
         ${ENABLE_CPPCHECK}
         ${ENABLE_CLANG_TIDY}
          WARNINGS_AS_ERRORS
 )
 
-add_executable(${PROJECT_NAME} src/Example.cpp src/main.cpp)
+add_library(${PROJECT_NAME} src/Example.cpp)
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)
 target_link_libraries(${PROJECT_NAME}
-        PRIVATE cpptemplate_project_options cpptemplate_project_warnings
+        PRIVATE kflashlib_project_options kflashlib_project_warnings
 )
 
 target_find_dependencies(${PROJECT_NAME}
